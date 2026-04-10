@@ -22,6 +22,15 @@ class PulseStrobe(Preset):
             "min": 1,
             "max": 20,
             "default": 5
+        },
+
+        # Start from color or from black
+        {
+            "name": "Start from:",
+            "key": "start",
+            "type": "choice",
+            "options": ["black", "color"],
+            "default": "black"
         }
     ]
 
@@ -30,17 +39,21 @@ class PulseStrobe(Preset):
         width, height = 400, 32
         color = np.array(kwargs["color"])
         pulses = kwargs["pulses"]
+        start = kwargs["start"]
     # ╰───────────────────────────────────╯
         
     # ╭─ Empty array ────────────────────────────────────────────╮
         img_array = np.zeros((height, width, 3), dtype=np.uint8)
     # ╰──────────────────────────────────────────────────────────╯
         
-    # ╭─ Sine wave assigned to color intensity ─────────────────────────╮
+    # ╭─ Sine wave assigned to color intensity ────────────────────────────────╮
+        # Phase shift based on selected start point
+        dphi = np.pi if start == "black" else 0
+
         for x in range(width):
-            wave = (np.cos((x / width) * pulses * 2 * np.pi) + 1) / 2.0
+            wave = (np.cos((x / width) * pulses * 2 * np.pi + dphi) + 1) / 2.0
             
             img_array[:, x] = (color * wave).astype(np.uint8)
-    # ╰─────────────────────────────────────────────────────────────────╯
+    # ╰────────────────────────────────────────────────────────────────────────╯
             
         return img_array
