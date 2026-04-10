@@ -324,6 +324,9 @@ class App(QMainWindow):
         # Generate image from preset
         self.current_image_array = self.current_preset.generate(self.current_params)
 
+        # Reset animation frame
+        self.anim_frame = 0
+
         # Render image preview
         self.render_preview()
     # ╰──────────────────────────────────────────────────────────────────────────────╯
