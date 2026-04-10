@@ -94,10 +94,10 @@ class StaticColor(Preset):
     params = [
         # Color (user input)
         {
-            "name": "Color",  # Displayed field name
-            "key": "color", # Attribute name in kwargs
-            "type": "color", # Input field type
-            "default": (204, 204, 204)  # default value
+            "name": "Color",  # Displayed field name in UI (can be anything)
+            "key": "color", # Attribute name in kwargs (can be anything)
+            "type": "color", # Input field type ("color", "int", "choice" or "bool")
+            "default": (204, 204, 204)  # Default value
         }
     ]
 
@@ -110,6 +110,7 @@ class StaticColor(Preset):
         
         return img_array
 ```
+For more examples see files in `presets/`
 
 ## Contribution
 
