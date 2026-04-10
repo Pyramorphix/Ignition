@@ -1,0 +1,5 @@
+numpy==2.4.4
+Pillow==12.2.0
+PyQt6==6.11.0
+pyqt6_sip==13.11.1
+qt_material==2.17
