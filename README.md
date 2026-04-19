@@ -12,6 +12,7 @@ A PyQt6-based GUI application for designing LED matrix presets. Create static im
 - Static Color
 
 ### Animations
+- Moving Dot
 - Bouncing Dot
 - Pulse
 - Rainbow
@@ -66,6 +67,7 @@ ignition/
 │   │   ├── gradient2.py
 │   │   └── static_color.py
 │   └── animation/       # Animation presets
+│       ├── moving_dot.py
 │       ├── bouncing_dot.py
 │       ├── pulse.py
 │       ├── rainbow.py
