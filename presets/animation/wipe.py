@@ -1,4 +1,5 @@
 import numpy as np
+from PIL import Image
 from preset_base import Preset
 
 class Wipe(Preset):
@@ -6,6 +7,23 @@ class Wipe(Preset):
     mode = "animation"
 
     params = [
+        # Source Choice
+        {
+            "name": "Source",
+            "key": "source_type",
+            "type": "choice",
+            "options": ["Color", "Image"],
+            "default": "Color"
+        },
+        
+        # Image File
+        {
+            "name": "Image File",
+            "key": "image_path",
+            "type": "file",
+            "default": ""
+        },
+
         # Color
         {
             "name": "Color",
@@ -19,14 +37,14 @@ class Wipe(Preset):
             "name": "Mode",
             "key": "in_out",
             "type": "choice",
-            "options": ["Fade In", "Fade Out"],
-            "default": "Fade In"
+            "options": ["Wipe In", "Wipe Out"],
+            "default": "Wipe In"
         },
 
         # Fade starting position (Top / Bottom)
         {
-            "name": "Fade Start",
-            "key": "fade_start",
+            "name": "Wipe Start",
+            "key": "wipe_start",
             "type": "choice",
             "options": ["Top", "Bottom"],
             "default": "Bottom"
@@ -58,19 +76,41 @@ class Wipe(Preset):
     ]
 
     def generate(self, kwargs):
-    # ╭─ Parameters ──────────────────────╮
+    # ╭─ Parameters ─────────────────────────────────────╮
         width, height = 400, 32
-        color = np.array(kwargs["color"])
+        source_type = kwargs.get("source_type", "Color")
+        image_path = kwargs.get("image_path", "")
+        base_color = np.array(kwargs["color"])
         in_out = kwargs["in_out"]
-        fade_start = kwargs["fade_start"]
+        wipe_start = kwargs["wipe_start"]
         easing = kwargs["easing"]
         smoothness = kwargs["smoothness"]
-    # ╰───────────────────────────────────╯
+    # ╰──────────────────────────────────────────────────╯
         
     # ╭─ Empty array ────────────────────────────────────────────╮
         img_array = np.zeros((height, width, 3), dtype=np.uint8)
     # ╰──────────────────────────────────────────────────────────╯
         
+    # ╭─ Determine target colors for the 32 pixels ──────────────────╮
+        if source_type == "Image" and image_path:
+            try:
+                img = Image.open(image_path).convert("RGB")
+                # Force resize in case user uploads something else
+                img = img.resize((2, height)) 
+                img_np = np.array(img)
+                # Take the first column of the image
+                # Shape becomes (32, 3)
+                target_colors = img_np[:, 0, :] 
+
+            except Exception as e:
+                print(f"Failed to load image: {e}")
+                # Fall back to solid color
+                target_colors = np.tile(base_color, (height, 1)) 
+        else:
+            # Tile the base color to create a (32, 3) array
+            target_colors = np.tile(base_color, (height, 1))
+    # ╰─────────────────────────────────────────────────────────────╯
+
     # ╭─ Precompute pixel indices ───────────────────────────╮
         pixel_indices = np.arange(height, dtype=np.float32)
     # ╰──────────────────────────────────────────────────────╯
@@ -96,14 +136,14 @@ class Wipe(Preset):
             edge = t * height
         # ╰───────────────────────────────╯
             
-        # ╭─ Adjust fade direction ──╮
-            if in_out == "Fade Out":
+        # ╭─ Adjust direction ───────╮
+            if in_out == "Wipe Out":
                 edge = height - edge
         # ╰──────────────────────────╯
 
         # ╭─ Calculate alpha for each pixel ────────────────────────
-            if ((in_out == "Fade In" and fade_start == "Top") or
-                (in_out == "Fade Out" and fade_start == "Bottom")):
+            if ((in_out == "Wipe In" and wipe_start == "Top") or
+                (in_out == "Wipe Out" and wipe_start == "Bottom")):
                 # Edge moves from the top downwards
                 # Pixels near top should be filled first
                 dist_from_edge = edge - pixel_indices
@@ -120,12 +160,12 @@ class Wipe(Preset):
                 alpha = (dist_from_edge >= 0).astype(np.float32)
         # ╰──────────────────────────────────────────────────────────────╯
 
-        # ╭─ Assemble frame ────────────────────────────────╮
+        # ╭─ Assemble frame ────────────────────────────────────────╮
             # Reshape alpha : (height,) -> (height, 1)
             alpha = alpha.reshape(-1, 1)
-            frame_colors = (color * alpha).astype(np.uint8)
+            frame_colors = (target_colors * alpha).astype(np.uint8)
             img_array[:, frame] = frame_colors
-        # ╰─────────────────────────────────────────────────╯
+        # ╰─────────────────────────────────────────────────────────╯
                     
         return img_array
 
