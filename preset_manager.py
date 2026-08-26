@@ -2,7 +2,7 @@ import importlib
 import pkgutil
 
 from preset_base import Preset
-import presets  # Imports the folder
+import presets  # Import preset directory
 
 def load_presets():
     """Loads all the presets from 'presets/' directory and returns them as list"""
