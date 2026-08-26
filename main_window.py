@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtGui import QPixmap, QImage, QColor
 from PyQt6.QtCore import Qt, QTimer
 
+from constants import *
 from preset_manager import load_presets
 
 
@@ -35,7 +36,7 @@ class App(QMainWindow):
         self.presets = load_presets()
     # ╰───────────────────────────────╯
 
-    # ╭─ Putting up UI ───────────╮
+    # ╭─ Setting up UI ───────────╮
         self.init_ui()
         self.update_preset_list()
     # ╰───────────────────────────╯
@@ -60,7 +61,7 @@ class App(QMainWindow):
         create_group = QGroupBox("Create")
         create_layout = QVBoxLayout()
         
-        # Type selector
+        # Type selector (Image / Animation)
         mode_layout = QHBoxLayout()
         self.radio_image = QRadioButton("Image (2x32)")
         self.radio_anim = QRadioButton("Animation (400x32)")
@@ -118,7 +119,7 @@ class App(QMainWindow):
         # └────────────────────────────┘
         anim_controls_layout = QHBoxLayout()
         
-        # Static/animated preview switch
+    # ── Static/animated preview switch ─────────────────────────────────
         self.anim_checkbox = QCheckBox("Play Animation")
         self.anim_checkbox.setEnabled(False)
         self.anim_checkbox.toggled.connect(self.render_preview)
@@ -126,21 +127,24 @@ class App(QMainWindow):
         anim_controls_layout.addWidget(self.anim_checkbox)
         anim_controls_layout.addStretch() 
         
-        # Animation speed slider
-        self.speed_label = QLabel("1.00 s")
+    # ── Animation speed slider ─────────────────────────────────────────
+        self.speed_label = QLabel(f"{(ANIM_SLIDER_DEFAULT / 100):.2f} s")
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        # Slider step is .01s
-        self.speed_slider.setMinimum(10)   # .1s
-        self.speed_slider.setMaximum(200)  # 2s
-        self.speed_slider.setValue(100)  # 1s
+
+        self.speed_slider.setMinimum(ANIM_SLIDER_STEP)
+        self.speed_slider.setMaximum(ANIM_SLIDER_MAX)
+        self.speed_slider.setValue(ANIM_SLIDER_DEFAULT) 
+        # Disable slider on startup
+        # because we are in static image mode
         self.speed_slider.setEnabled(False)
+
         self.speed_slider.setFixedWidth(150) 
         self.speed_slider.valueChanged.connect(self.update_speed)
-
 
         anim_controls_layout.addWidget(QLabel("Playback Time:"))
         anim_controls_layout.addWidget(self.speed_slider)
         anim_controls_layout.addWidget(self.speed_label)
+
 
         preview_layout.addLayout(anim_controls_layout) 
 
@@ -169,7 +173,7 @@ class App(QMainWindow):
 
 # ╭──────────────────────────────────────────────────────────╮
 # │                   Preset list updater                    │
-# │      (for when we switch "image" <--> "animation")       │
+# │      (for when we switch "Image" <--> "Animation")       │
 # ╰──────────────────────────────────────────────────────────╯
     def update_preset_list(self):
     # ╭─ Empty the list ──────────╮
@@ -180,7 +184,7 @@ class App(QMainWindow):
         mode = "image" if self.radio_image.isChecked() else "animation"
     # ╰─────────────────────────────────────────────────────────────────╯
 
-    # ╭─ Configure animation preview ──────────────────────╮
+    # ╭─ Enable/disable "Play animation" checkbox ─────────╮
         self.anim_checkbox.setEnabled(mode == "animation")
         if mode == "image":
             self.anim_checkbox.setChecked(False)
@@ -212,28 +216,28 @@ class App(QMainWindow):
         self.current_params = {}
     # ╰─────────────────────────────────────────────────────────╯
 
-    # ╭─ Build configuration window ────────────────────────────────────────────────────────────────────╮
+    # ╭─ Add preset's controls to the panel ────────────────────────────────────────────────────────────╮
         for param in self.current_preset.params:
             key = param["key"]
             self.current_params[key] = param["default"]
             
+            # ┌──────────────┐
+            #   Color picker 
+            # └──────────────┘
             if param["type"] == "color":
-                # ┌──────────────┐
-                #   Color picker 
-                # └──────────────┘
                 btn = QPushButton("Choose Color")
                 r, g, b = param["default"]
-                # Adjust text color for contrast
+                # Adjust color of the placeholder text for contrast
                 text_color = "black" if (r*0.299 + g*0.587 + b*0.114) > 186 else "white"
                 btn.setStyleSheet(
                   f"background-color: rgb({r},{g},{b}); color: {text_color}; border: none;")
                 btn.clicked.connect(lambda checked, k=key, b=btn: self.pick_color(k, b))
                 self.config_layout.addRow(param["name"], btn)
                 
+            # ┌────────┐
+            #   Slider 
+            # └────────┘
             elif param["type"] == "int":
-                # ┌────────┐
-                #   Slider 
-                # └────────┘
                 slider = QSlider(Qt.Orientation.Horizontal)
                 slider.setMinimum(param["min"])
                 slider.setMaximum(param["max"])
@@ -247,24 +251,32 @@ class App(QMainWindow):
                 row_layout.addWidget(val_label)
                 self.config_layout.addRow(param["name"], row_layout)
 
+            # ┌───────────┐
+            #   Combo box 
+            # └───────────┘
             elif param["type"] == "choice":
-                # ┌───────────┐
-                #   Combo box 
-                # └───────────┘
                 combo = QComboBox()
                 combo.addItems(param["options"])
                 combo.setCurrentText(param["default"])
                 combo.currentTextChanged.connect(lambda val, k=key: self.update_generic(k, val))
                 self.config_layout.addRow(param["name"], combo)
 
+            # ┌──────────┐
+            #   Checkbox 
+            # └──────────┘
             elif param["type"] == "bool":
-                # ┌──────────┐
-                #   Checkbox 
-                # └──────────┘
                 checkbox = QCheckBox()
                 checkbox.setChecked(param["default"])
                 checkbox.toggled.connect(lambda val, k=key: self.update_generic(k, val))
                 self.config_layout.addRow(param["name"], checkbox)
+
+            # ┌─────────────┐
+            #   File picker 
+            # └─────────────┘
+            elif param["type"] == "file":
+                btn = QPushButton(param["default"] if param["default"] else "Select Image...")
+                btn.clicked.connect(lambda checked, k=key, b=btn: self.pick_file(k, b))
+                self.config_layout.addRow(param["name"], btn)
     # ╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
 
     # ╭─ Make preview ────────╮
@@ -275,6 +287,22 @@ class App(QMainWindow):
 # ╭──────────────────────────────────────────────────────────╮
 # │               Scripts for updating values                │
 # ╰──────────────────────────────────────────────────────────╯
+    def pick_file(self, key, btn):
+    # ╭─ File dialog ─────────────────────────────────────────────────────────────────────────────────────╮
+        # Ask user to choose file
+        filename, _ = QFileDialog.getOpenFileName(self, "Select Image", "", "Images (*.bmp *.png *.jpg)")
+        
+        if filename:
+            self.current_params[key] = filename
+            
+            # Extract the file name to display on the button
+            short_name = filename.split("/")[-1]
+            btn.setText(short_name)
+            
+            # Update image preview
+            self.generate_image()
+    # ╰───────────────────────────────────────────────────────────────────────────────────────────────────╯
+
     def pick_color(self, key, btn):
     # ╭─ Color picker ─────────────────────────────────────────────────────────────────────╮
         # Read color from user
@@ -285,7 +313,7 @@ class App(QMainWindow):
             r, g, b = color.red(), color.green(), color.blue()
             self.current_params[key] = (r, g, b)
 
-            # Adjust placeholder color for contrast
+            # Adjust color of the placeholder text for contrast
             text_color = "black" if (r*0.299 + g*0.587 + b*0.114) > 186 else "white"
 
             # Restyle button
@@ -318,7 +346,7 @@ class App(QMainWindow):
 
     def generate_image(self):
     # ╭─ UI updater ─────────────────────────────────────────────────────────────────╮
-        # Do nothing if something's wrong
+        # If something's wrong, do nothing
         if not self.current_preset: return
 
         # Generate image from preset
@@ -332,15 +360,15 @@ class App(QMainWindow):
     # ╰──────────────────────────────────────────────────────────────────────────────╯
 
     def update_speed(self, val):
-    # ╭─ Animation speed slider ─────────────────────╮
+    # ╭─ Animation speed slider ──────────────────────────────────────╮
         # Update placeholder
         self.speed_label.setText(f"{val/100:.2f} s")
 
         if self.timer.isActive():
             # Update timer time step
-            # ms delay = .01s * 10 / 400 frames
-            self.timer.setInterval(int(val / 40))
-    # ╰──────────────────────────────────────────────╯
+            # ms delay = SLIDER_STEP s * 10 / 400 frames
+            self.timer.setInterval(int(ANIM_SLIDER_STEP * val / 400))
+    # ╰───────────────────────────────────────────────────────────────╯
 
 
 # ╭──────────────────────────────────────────────────────────╮
