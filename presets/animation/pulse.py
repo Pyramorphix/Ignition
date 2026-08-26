@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import signal
 from preset_base import Preset
 
 class PulseStrobe(Preset):
@@ -12,6 +13,15 @@ class PulseStrobe(Preset):
             "key": "color",
             "type": "color",
             "default": (0, 255, 0)
+        },
+
+        # Pulse mode
+        {
+            "name": "Pulse mode",
+            "key": "mode",
+            "type": "choice",
+            "options": ["sine wave", "rect wave"],
+            "default": "sine wave"
         },
 
         # Amount of pulses
@@ -38,6 +48,7 @@ class PulseStrobe(Preset):
     # ╭─ Parameters ──────────────────────╮
         width, height = 400, 32
         color = np.array(kwargs["color"])
+        mode = kwargs["mode"]
         pulses = kwargs["pulses"]
         start = kwargs["start"]
     # ╰───────────────────────────────────╯
@@ -46,14 +57,21 @@ class PulseStrobe(Preset):
         img_array = np.zeros((height, width, 3), dtype=np.uint8)
     # ╰──────────────────────────────────────────────────────────╯
         
-    # ╭─ Sine wave assigned to color intensity ────────────────────────────────╮
+    # ╭─ Chosen wave assigned to color intensity ──────────────────────────────────╮
         # Phase shift based on selected start point
         dphi = np.pi if start == "black" else 0
 
-        for x in range(width):
-            wave = (np.cos((x / width) * pulses * 2 * np.pi + dphi) + 1) / 2.0
-            
-            img_array[:, x] = (color * wave).astype(np.uint8)
-    # ╰────────────────────────────────────────────────────────────────────────╯
+        if mode == "sine wave":
+            for x in range(width):
+                wave = (np.cos((x / width) * pulses * 2 * np.pi + dphi) + 1) / 2.0
+                
+                img_array[:, x] = (color * wave).astype(np.uint8)
+
+        elif mode == "rect wave":
+            for x in range(width):
+                wave = (signal.square((x / width) * pulses * 2 * np.pi + dphi))
+
+                img_array[:, x] = (color * wave).astype(np.uint8)
+    # ╰────────────────────────────────────────────────────────────────────────────╯
             
         return img_array
